@@ -12,7 +12,10 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.pdf_maker.domain.repository.Repository
+import com.example.pdf_maker.presentation.mainscreen.state.Event
 import com.example.pdf_maker.presentation.mainscreen.state.State
+import com.example.pdf_maker.utils.RepoResponse
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -26,31 +29,45 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainScreenViewModel @Inject constructor(
-  private val gmsDocumentScannerOptions: GmsDocumentScannerOptions,
-  private val context: Context
+  private val context: Context,
+  private val repository: Repository
 ) : ViewModel() {
 
   private val _scanState = MutableStateFlow(State())
   val scanState: StateFlow<State> = _scanState
 
-  fun addImage(imageUri: Uri) {
-    val bitmap = getBitmapFromUri(context, imageUri)
-    _scanState.value = _scanState.value.copy(uris = scanState.value.uris + bitmap!!)
+  fun onEvent(event: Event) {
+    when (event) {
+      Event.Download -> {
+        savePdf()
+      }
+
+      Event.GetImage -> {
+        addImage()
+      }
+
+      Event.SaveDraft -> {}
+      is Event.PdfUriChanged -> {
+        _scanState.value = _scanState.value.copy(
+          pdfUri = event.pdfUri
+        )
+      }
+    }
   }
 
-  fun getScanIntent(
-    activity: Activity,
-    onFailure: (Exception) -> Unit,
-    onSuccess: (IntentSender) -> Unit
-  ) {
-    val scanner = GmsDocumentScanning.getClient(gmsDocumentScannerOptions)
-    scanner.getStartScanIntent(activity)
-      .addOnSuccessListener { intentSender ->
-        onSuccess(intentSender)
-      }
-      .addOnFailureListener { exception ->
-        onFailure(exception)
-      }
+  private fun addImage() {
+    val bitmap = scanState.value.pdfUri?.let { getBitmapFromUri(context, it) }
+    bitmap?.let {
+      _scanState.value = _scanState.value.copy(bitmaps = scanState.value.bitmaps + it)
+    }
+  }
+
+  private val _scanResult = MutableStateFlow<RepoResponse<IntentSender>>(RepoResponse.Loading)
+  val scanResult: StateFlow<RepoResponse<IntentSender>> = _scanResult
+
+  fun repoGetScannerIntent(activity: Activity) {
+    _scanResult.value = RepoResponse.Loading
+    _scanResult.value = repository.getScanIntent(activity = activity)
   }
 
   fun handleScanResult(result: ActivityResult) {
@@ -58,10 +75,24 @@ class MainScreenViewModel @Inject constructor(
       val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
       val uri = scanResult?.pages?.mapNotNull { it.imageUri } ?: emptyList()
       val bitmap = getBitmapFromUri(context, uri[0])
-      _scanState.value = _scanState.value.copy(uris = scanState.value.uris + bitmap!!)
+      bitmap?.let {
+        _scanState.value = _scanState.value.copy(bitmaps = scanState.value.bitmaps + bitmap)
+      }
+    }
+  }
 
+  private val _savePdf = MutableStateFlow<RepoResponse<Boolean>>(RepoResponse.Loading)
+  val savePdf: StateFlow<RepoResponse<Boolean>> = _savePdf
+
+  private fun savePdf() {
+    _savePdf.value = RepoResponse.Loading
+    val bitmaps = scanState.value.bitmaps
+    if (bitmaps.isNotEmpty()) {
+      viewModelScope.launch {
+        _savePdf.value = repository.convertToPdf(scanState.value.bitmaps)
+      }
     } else {
-      Log.d("TAG2", "Error")
+      _savePdf.value = RepoResponse.Error(Exception("file is empty"))
     }
   }
 
@@ -72,46 +103,6 @@ class MainScreenViewModel @Inject constructor(
       BitmapFactory.decodeStream(inputStream)
     } catch (e: Exception) {
       null
-    }
-  }
-
-
-  fun convertUrisToPdf(
-    uris: List<Bitmap>,
-    onComplete: (String) -> Unit,
-    onError: (String) -> Unit
-  ) {
-    viewModelScope.launch {
-      try {
-        // Create a file in the Downloads directory
-        val downloadsDir =
-          Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val pdfFile = File(downloadsDir, "converted_document.pdf")
-
-        val pdfDocument = PdfDocument()
-
-        uris.forEachIndexed { index, bitmap ->
-          if (bitmap != null) {
-            val pageInfo =
-              PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, index + 1).create()
-            val page = pdfDocument.startPage(pageInfo)
-            val canvas = page.canvas
-            canvas.drawBitmap(bitmap, 0f, 0f, null)
-            pdfDocument.finishPage(page)
-          }
-        }
-
-        FileOutputStream(pdfFile).use { fos ->
-          pdfDocument.writeTo(fos)
-        }
-
-        pdfDocument.close()
-
-        // Notify completion
-        onComplete("PDF saved to ${pdfFile.absolutePath}")
-      } catch (e: Exception) {
-        onError("Failed to save PDF: ${e.localizedMessage}")
-      }
     }
   }
 }

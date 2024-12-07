@@ -4,5 +4,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 
 data class State(
-  val uris: List<Bitmap> = emptyList()
+  val bitmaps: List<Bitmap> = emptyList(),
+  val pdfUri : Uri? = null
 )

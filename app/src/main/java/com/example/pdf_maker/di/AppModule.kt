@@ -1,6 +1,8 @@
 package com.example.pdf_maker.di
 
 import android.content.Context
+import com.example.pdf_maker.data.repository.RepositoryImpl
+import com.example.pdf_maker.domain.repository.Repository
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import dagger.Module
 import dagger.Provides
@@ -30,5 +32,13 @@ object AppModule {
   @Singleton
   fun proVideContext(@ApplicationContext context: Context): Context {
     return context
+  }
+
+  @Provides
+  @Singleton
+  fun provideRepository(
+    gsDocumentScannerOptions: GmsDocumentScannerOptions,
+  ): Repository {
+    return RepositoryImpl(gsDocumentScannerOptions)
   }
 }
