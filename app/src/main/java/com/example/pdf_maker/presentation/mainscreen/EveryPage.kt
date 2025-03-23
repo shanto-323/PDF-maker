@@ -3,6 +3,7 @@ package com.example.pdf_maker.presentation.mainscreen
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,7 +18,10 @@ import coil.compose.AsyncImage
 
 
 @Composable
-fun EveryPage(uri: Bitmap) {
+fun EveryPage(
+  uri: Bitmap,
+  onClick: () -> Unit
+) {
   Box(
     modifier = Modifier
       .fillMaxWidth()
@@ -25,6 +29,9 @@ fun EveryPage(uri: Bitmap) {
       .background(Color.White)
       .border(1.dp, Color.Black)
       .padding(16.dp)
+      .clickable(onClick = {
+        onClick()
+      })
   ) {
     AsyncImage(
       model = uri,

@@ -62,6 +62,12 @@ class MainScreenViewModel @Inject constructor(
     }
   }
 
+  fun removeImage(bitmap: Bitmap) {
+    _scanState.value = _scanState.value.copy(
+      bitmaps = scanState.value.bitmaps.filter { it != bitmap }
+    )
+  }
+
   private val _scanResult = MutableStateFlow<RepoResponse<IntentSender>>(RepoResponse.Loading)
   val scanResult: StateFlow<RepoResponse<IntentSender>> = _scanResult
 

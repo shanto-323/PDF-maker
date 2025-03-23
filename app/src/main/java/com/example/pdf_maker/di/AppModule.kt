@@ -15,30 +15,30 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-  @Provides
-  @Singleton
-  fun provideGmsDocumentScannerOptions(): GmsDocumentScannerOptions {
-    return GmsDocumentScannerOptions.Builder()
-      .setGalleryImportAllowed(false)
-      .setPageLimit(1)
-      .setResultFormats(
-        GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
-      )
-      .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
-      .build()
-  }
+    @Provides
+    @Singleton
+    fun provideGmsDocumentScannerOptions(): GmsDocumentScannerOptions {
+        return GmsDocumentScannerOptions.Builder()
+            .setGalleryImportAllowed(false)
+            .setPageLimit(1)
+            .setResultFormats(
+                GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
+            )
+            .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+            .build()
+    }
 
-  @Provides
-  @Singleton
-  fun proVideContext(@ApplicationContext context: Context): Context {
-    return context
-  }
+    @Provides
+    @Singleton
+    fun proVideContext(@ApplicationContext context: Context): Context {
+        return context
+    }
 
-  @Provides
-  @Singleton
-  fun provideRepository(
-    gsDocumentScannerOptions: GmsDocumentScannerOptions,
-  ): Repository {
-    return RepositoryImpl(gsDocumentScannerOptions)
-  }
+    @Provides
+    @Singleton
+    fun provideRepository(
+        gsDocumentScannerOptions: GmsDocumentScannerOptions,
+    ): Repository {
+        return RepositoryImpl(gsDocumentScannerOptions)
+    }
 }
